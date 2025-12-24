@@ -46,7 +46,7 @@ export class UserService {
   }
 
   async findAll() {
-    return await this.userModal.find();
+    return await this.userModal.find().populate('profile');
   }
 
   async findOne(id: string) {
