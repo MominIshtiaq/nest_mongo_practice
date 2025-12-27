@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { genderEnum } from '../constants';
+import mongoose, { Types } from 'mongoose';
+import { User } from 'src/user/schemas/user.schema';
 
 @Schema()
 export class Profile {
@@ -20,6 +22,14 @@ export class Profile {
 
   @Prop({ type: String, required: false })
   profileImage?: string | null;
+
+  @Prop({
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    unique: true,
+    required: true,
+  })
+  user: User;
 }
 
 export const ProfileSchema = SchemaFactory.createForClass(Profile);

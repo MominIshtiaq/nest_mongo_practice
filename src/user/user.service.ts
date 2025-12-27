@@ -11,12 +11,18 @@ import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
 import { HashingProvider } from 'src/providers/hashing/hashing.provider';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
+import { ProfileService } from 'src/profile/profile.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModal: Model<User>,
+    @InjectConnection() private readonly connection: Connection,
+
     private readonly hashingProvider: HashingProvider,
+    private readonly profileService: ProfileService,
   ) {}
 
   public async checkUserExistWithEmail(email: string) {
@@ -26,27 +32,44 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto) {
-    const isExistingUser = await this.checkUserExistWithEmail(
-      createUserDto.email,
-    );
+    try {
+      const isExistingUser = await this.checkUserExistWithEmail(
+        createUserDto.email,
+      );
 
-    if (isExistingUser)
-      throw new BadRequestException('User with this email already exists');
+      if (isExistingUser)
+        throw new BadRequestException('User with this email already exists');
 
-    /* 
+      /* 
       The equalient of the following line of code is await this.userModal.create(createUserDto).
       This will create the instance to User name and also call the save method and save the user object to the DB
     */
 
-    const user = new this.userModal({
-      ...createUserDto,
-      password: await this.hashingProvider.hashPassword(createUserDto.password),
-    });
-    return await user.save();
+      const user = new this.userModal({
+        ...createUserDto,
+        password: await this.hashingProvider.hashPassword(
+          createUserDto.password,
+        ),
+      });
+
+      await user.save();
+
+      await this.profileService.createProfile({ userId: String(user._id) });
+
+      return {
+        message: 'User created successfully',
+        data: user,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException(error, {
+        description: 'Error while creating the User',
+      });
+    }
   }
 
   async findAll() {
-    return await this.userModal.find().populate('profile');
+    return await this.userModal.find();
   }
 
   async findOne(id: string) {
@@ -74,7 +97,7 @@ export class UserService {
   async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
     const user = await this.findOne(id);
 
-    const isMatch = this.hashingProvider.comparePassword(
+    const isMatch = await this.hashingProvider.comparePassword(
       updatePasswordDto.password,
       user.password,
     );

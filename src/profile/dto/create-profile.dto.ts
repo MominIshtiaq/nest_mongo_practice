@@ -1,28 +1,7 @@
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
-import { genderEnum } from '../constants';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateProfileDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsEnum(genderEnum)
-  gender?: genderEnum;
-
-  @IsOptional()
-  @IsDateString()
-  dateOfBirth?: Date;
-
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @IsOptional()
-  @IsString()
-  profileImage?: string;
+  userId: string;
 }
